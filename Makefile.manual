@@ -65,7 +65,7 @@ PORTOBJ=
 #PORTINCS=snprintf.h
 #PORTLIBS=-lrt -lmd5 -lsocket -lnsl -lresolv
 
-ALL= dnscap dnscap.cat1
+ALL= dnspy dnspy.cat1
 
 CDEBUG= -g -O
 CFLAGS= ${CDEBUG} ${CWARN} -DHAVE_BINDLIB=${HAVE_BINDLIB} \
@@ -77,20 +77,20 @@ all: ${ALL}
 
 install: all
 	mkdir -p /usr/local/bin /usr/local/man/cat1
-	if [ -f /usr/local/bin/dnscap ]; then \
-		mv -f /usr/local/bin/dnscap \
-			/usr/local/bin/dnscap.old; fi
-	cp dnscap /usr/local/bin
-	cp dnscap.cat1 /usr/local/man/cat1/dnscap.1
+	if [ -f /usr/local/bin/dnspy ]; then \
+		mv -f /usr/local/bin/dnspy \
+			/usr/local/bin/dnspy.old; fi
+	cp dnspy /usr/local/bin
+	cp dnspy.cat1 /usr/local/man/cat1/dnspy.1
 
 .c.o:
 	${CC} ${CFLAGS} -c $<
 
-DNSCAP_OBJ= dnscap.o dump_dns.o ${PORTOBJ}
-dnscap: ${DNSCAP_OBJ} Makefile
-	${CC} -o dnscap ${LDFLAGS} ${DNSCAP_OBJ} ${LDLIBS}
+DNSCAP_OBJ= dnspy.o dump_dns.o ${PORTOBJ}
+dnspy: ${DNSCAP_OBJ} Makefile
+	${CC} -o dnspy ${LDFLAGS} ${DNSCAP_OBJ} ${LDLIBS}
 
-${DNSCAP_OBJ}: Makefile dnscap.c dump_dns.c dump_dns.h ${PORTINCS}
+${DNSCAP_OBJ}: Makefile dnspy.c dump_dns.c dump_dns.h ${PORTINCS}
 
 snprintf.h:
 	wget -nc http://www.ijs.si/software/snprintf/snprintf_2.2.tar.gz
@@ -100,7 +100,7 @@ snprintf.h:
 	${MAKE} -C snprintf_2.2 "COMPATIBILITY=-DNEED_ASPRINTF -DNEED_VASPRINTF"
 	cp snprintf_2.2/snprintf.[ho] .
 
-dnscap.cat1: dnscap.1
-	nroff -mandoc dnscap.1 > dnscap.cat1
+dnspy.cat1: dnspy.1
+	nroff -mandoc dnspy.1 > dnspy.cat1
 
 clean:; rm -f ${ALL} snprintf* *.o *.core *.orig all

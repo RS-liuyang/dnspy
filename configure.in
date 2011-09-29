@@ -2,12 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.64])
-AC_INIT([dnscap],
-	m4_esyscmd([svn info | awk '/^Revision:/ {print "r" $2}' | tr -d '\n']),
-	[wessels@dns-oarc.net],
-	[],
-	[http://dnscap.dns-oarc.net/])
-AC_CONFIG_SRCDIR([dnscap.c])
+AC_INIT([dnspy],[0.9])
+AC_CONFIG_SRCDIR([dnspy.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR(cfgaux)
 
@@ -20,7 +16,7 @@ AC_CHECK_LIB([bind], [ns_initparse], [], [AC_CHECK_LIB([bind], [__ns_initparse])
 AC_CHECK_LIB([resolv], [res_mkquery], [], [AC_CHECK_LIB([resolv], [__res_mkquery])])
 AC_CHECK_LIB([pcap], [pcap_open_live], [],
 	[
-	echo "dnscap requires libpcap.  Install package libpcap-dev on most Linux"
+	echo "dnspy requires libpcap.  Install package libpcap-dev on most Linux"
 	echo "systems.  You can also get the source from www.tcpdump.org."
 	exit 1
 	])
