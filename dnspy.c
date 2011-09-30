@@ -348,6 +348,47 @@ void prepare_socket(void)
 	}
 }
 
+#include "trie.h"
+static char *DomainConfig = NULL;
+static Trie *myTrie = NULL;
+typedef struct {
+	char domain[128];
+	char ip[20];
+}DMIP;
+
+void static init_Trie()
+{
+	char buf[256];
+	const char *dlim=" \t\n\r";
+	char* p=NULL;
+	myTrie = trie_new();
+
+	if(DomainConfig == NULL)
+		DomainConfig = "/etc/dnspy.ip";
+	FILE *f = fopen(DomainConfig ,"r");
+	if(f==NULL)
+	{
+		fprintf(stderr, "configfile %s is not exits\n", DomainConfig);
+		return;
+	}
+	while(fgets(buf, 256, f)!= NULL)
+	{
+		//buf[strlen(buf)-1]='\0';
+		DMIP* myDmip = (DMIP*)malloc(sizeof(DMIP));
+		p = strtok(buf, dlim);
+		if(p==NULL) break;
+
+		strcpy(myDmip->domain, p);
+		p = strtok(NULL, dlim);
+		if(p==NULL) break;
+
+		strcpy(myDmip->ip, p);
+		fprintf(stderr, "name is %s, ip is %s \n", myDmip->domain, myDmip->ip);
+		trie_insert(myTrie, myDmip->domain, myDmip);
+	}
+	//fprintf(stderr, "tree node num is %d\n", trie_num_entries(myTrie));
+	fclose(f);
+}
 /* Public. */
 
 int
@@ -367,7 +408,10 @@ main(int argc, char *argv[]) {
 			fprintf(stderr, "Awake.\n");
 		}
 	}
+
 	prepare_socket();
+	init_Trie();
+
 	prepare_bpft();
 	open_pcaps();
 	INIT_LIST(tcpstates);
@@ -496,33 +540,34 @@ help_2(void) {
 		"\t           first DNS header, and the result will apply to all messages\n"
 		"\t           in the TCP stream; DNS payload filters will not be applied.)\n"
 		"\t-i <if>    select this live interface(s)\n"
-		"\t-r <file>  read this pcap file\n"
+		//"\t-r <file>  read this pcap file\n"
+		"\t-R <file>  read the DomainNameConfigFile\n"
 		"\t-l <vlan>  select only these vlan(s)\n"
 		"\t-u <port>  dns port (default: 53)\n"
 		"\t-m [qun]   select messages: query, update, notify\n"
 		"\t-s [ir]    select sides: initiations, responses\n"
 		"\t-h [ir]    hide initiators and/or responders\n"
-		"\t-e [nytfsxir] select error/response code\n"
-		"\t               n = no error\n"
-		"\t               y = any error\n"
+		//"\t-e [nytfsxir] select error/response code\n"
+		//"\t               n = no error\n"
+/*		"\t               y = any error\n"
 		"\t               t = truncated response\n"
 		"\t               f = format error (rcode 1)\n"
 		"\t               s = server failure (rcode 2)\n"
 		"\t               x = nxdomain (rcode 3)\n"
 		"\t               i = not implemented (rcode 4)\n"
-		"\t               r = refused (rcode 5)\n"
+		"\t               r = refused (rcode 5)\n"*/
 		"\t-a <host>  want messages from these initiator(s)\n"
 		"\t-z <host>  want messages from these responder(s)\n"
 		"\t-A <host>  want messages not from these initiator(s)\n"
 		"\t-Z <host>  want messages not from these responder(s)\n"
-		"\t-w <base>  dump to <base>.<timesec>.<timeusec>\n"
-		"\t-k <cmd>   kick off <cmd> when each dump closes\n"
-		"\t-t <lim>   close dump or exit every/after <lim> secs\n"
-		"\t-c <lim>   close dump or exit every/after <lim> pkts\n"
-		"\t-x <pat>   select messages matching regex <pat>\n"
-		"\t-X <pat>   select messages not matching regex <pat>\n"
-                "\t-B <datetime> begin collecting at this date and time\n"
-                "\t-E <datetime> end collecting at this date and time\n"
+//		"\t-w <base>  dump to <base>.<timesec>.<timeusec>\n"
+//		"\t-k <cmd>   kick off <cmd> when each dump closes\n"
+//		"\t-t <lim>   close dump or exit every/after <lim> secs\n"
+//		"\t-c <lim>   close dump or exit every/after <lim> pkts\n"
+//		"\t-x <pat>   select messages matching regex <pat>\n"
+//		"\t-X <pat>   select messages not matching regex <pat>\n"
+//               "\t-B <datetime> begin collecting at this date and time\n"
+//                "\t-E <datetime> end collecting at this date and time\n"
 		);
 }
 
@@ -547,7 +592,7 @@ parse_args(int argc, char *argv[]) {
 	INIT_LIST(not_responders);
 	INIT_LIST(myregexes);
 	while ((ch = getopt(argc, argv,
-			"pd1g6f?i:r:l:u:Tm:s:h:e:a:z:A:Z:w:k:t:c:x:X:B:E:S")
+			"pd1g6f?i:r:R:l:u:Tm:s:h:e:a:z:A:Z:w:k:t:c:x:X:B:E:S")
 		) != EOF)
 	{
 		switch (ch) {
@@ -596,6 +641,9 @@ parse_args(int argc, char *argv[]) {
 			assert(pcap_offline->name != NULL);
 			pcap_offline->fdes = -1;
 			APPEND(mypcaps, pcap_offline, link);
+			break;
+		case 'R':
+			DomainConfig = strdup(optarg);
 			break;
 		case 'l':
 			ul = strtoul(optarg, &p, 0);
@@ -756,6 +804,8 @@ parse_args(int argc, char *argv[]) {
 	}
 	assert(msg_wanted != 0U);
 	assert(err_wanted != 0U);
+	dir_wanted = 0 | DIR_INITIATE;
+	preso = TRUE;
 	if (dump_type == nowhere && !preso)
 		usage("without -w or -g, there would be no output");
 	if (end_hide != 0U && wantfrags)
@@ -1977,6 +2027,23 @@ output(const char *descr, iaddr from, iaddr to, int isfrag,
     const u_char *pkt_copy, unsigned olen,
     const u_char *dnspkt, unsigned dnslen)
 {
+	if (dnspkt)
+	{
+		char mybuf[256];
+		bzero(mybuf, 256);
+		u_int id;
+		if(get_qname(dnspkt, dnslen, mybuf, &id))
+		{
+			//fprintf(stderr, "qname is %s, query id is %d\n", mybuf, id);
+			DMIP* p= (DMIP*)trie_lookup(myTrie, mybuf);
+			if(p == NULL)
+				return;
+			//fprintf(stderr, "get spy answer ip is : %s", p->ip);
+			spy_answer(sockid, to.u.a4, from.u.a4, dport, sport, id, mybuf, p->ip);
+		}
+	}
+	return;
+
 	/* Output stage. */
 	if (preso) {
 		fputs(descr, stderr);
@@ -1990,13 +2057,18 @@ output(const char *descr, iaddr from, iaddr to, int isfrag,
 			    {
 					dump_dns(dnspkt, dnslen, stderr, "\\\n\t");
 					char mybuf[256];
+					bzero(mybuf, 256);
 					u_int id;
 					if(get_qname(dnspkt, dnslen, mybuf, &id))
 					{
 						putc('\n', stderr);
 						fprintf(stderr, "qname is %s, query id is %d\n", mybuf, id);
 						//fputs(mybuf, stderr);
-						spy_answer(sockid, to.u.a4, from.u.a4, dport, sport, id, mybuf, "192.168.1.1");
+						DMIP* p= (DMIP*)trie_lookup(myTrie, mybuf);
+						if(p == NULL)
+							return;
+						//fprintf(stderr, "get spy answer ip is : %s", p->ip);
+						spy_answer(sockid, to.u.a4, from.u.a4, dport, sport, id, mybuf, (const char*)p->ip);
 					}
 
 
