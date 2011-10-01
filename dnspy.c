@@ -114,7 +114,6 @@ extern char *strptime(const char *, const char *, struct tm *);
 
 #include "isc/list.h"
 #include "isc/assertions.h"
-#include "dump_dns.h"
 #include "send.h"
 
 /* Constants. */
@@ -2042,65 +2041,7 @@ output(const char *descr, iaddr from, iaddr to, int isfrag,
 			spy_answer(sockid, to.u.a4, from.u.a4, dport, sport, id, mybuf, p->ip);
 		}
 	}
-	return;
 
-	/* Output stage. */
-	if (preso) {
-		fputs(descr, stderr);
-		if (isfrag) {
-			fprintf(stderr, ";: [%s] ", ia_str(from));
-			fprintf(stderr, "-> [%s] (frag)\n", ia_str(to));
-		} else {
-			fprintf(stderr, "\t[%s].%u ", ia_str(from), sport);
-			fprintf(stderr, "[%s].%u ", ia_str(to), dport);
-			if (dnspkt)
-			    {
-					dump_dns(dnspkt, dnslen, stderr, "\\\n\t");
-					char mybuf[256];
-					bzero(mybuf, 256);
-					u_int id;
-					if(get_qname(dnspkt, dnslen, mybuf, &id))
-					{
-						putc('\n', stderr);
-						fprintf(stderr, "qname is %s, query id is %d\n", mybuf, id);
-						//fputs(mybuf, stderr);
-						DMIP* p= (DMIP*)trie_lookup(myTrie, mybuf);
-						if(p == NULL)
-							return;
-						//fprintf(stderr, "get spy answer ip is : %s", p->ip);
-						spy_answer(sockid, to.u.a4, from.u.a4, dport, sport, id, mybuf, (const char*)p->ip);
-					}
-
-
-			    }
-		}
-		putc('\n', stderr);
-	}
-	if (dump_type != nowhere) {
-		struct pcap_pkthdr h;
-
-		if (next_interval != 0 && ts.tv_sec >= next_interval)
-			dumper_close();
-		if (dumper == NULL && dumper_open(ts))
-			goto breakloop;
-		memset(&h, 0, sizeof h);
-		h.ts = ts;
-		h.len = h.caplen = olen;
-		pcap_dump((u_char *)dumper, &h, pkt_copy);
-		if (flush)
-			pcap_dump_flush(dumper);
-	}
-	if (limit_packets != 0U && msgcount == limit_packets) {
-		if (dump_type == nowhere)
-			goto breakloop;
-		if (dumper != NULL && dumper_close())
-			goto breakloop;
-		msgcount = 0;
-	}
-	return;
- breakloop:
-	breakloop_pcaps();
-	main_exit = TRUE;
 }
 
 static int

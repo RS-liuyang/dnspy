@@ -34,8 +34,6 @@ datadir=@datadir@
 mandir=@mandir@
 
 SRCS=	${prog}.c \
-	dump_dns.c \
-	dump_dns.h \
 	send.h \
 	send.c \
 	trie.h \
@@ -43,7 +41,6 @@ SRCS=	${prog}.c \
 	${NEED_SNPRINTF_H}
 
 OBJS=	${prog}.o \
-	dump_dns.o \
 	send.o \
 	trie.o \
 	${NEED_SNPRINTF_O}
