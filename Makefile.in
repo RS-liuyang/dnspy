@@ -38,11 +38,14 @@ SRCS=	${prog}.c \
 	send.c \
 	trie.h \
 	trie.c \
+	dmip.h \
+	dmip.c \
 	${NEED_SNPRINTF_H}
 
 OBJS=	${prog}.o \
 	send.o \
 	trie.o \
+	dmip.o \
 	${NEED_SNPRINTF_O}
 
 all: ${prog} ${prog}.cat1

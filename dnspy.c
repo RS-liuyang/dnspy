@@ -350,10 +350,7 @@ void prepare_socket(void)
 #include "trie.h"
 static char *DomainConfig = NULL;
 static Trie *myTrie = NULL;
-typedef struct {
-	char domain[128];
-	char ip[20];
-}DMIP;
+#include "dmip.h"
 
 void static init_Trie()
 {
@@ -373,17 +370,22 @@ void static init_Trie()
 	while(fgets(buf, 256, f)!= NULL)
 	{
 		//buf[strlen(buf)-1]='\0';
-		DMIP* myDmip = (DMIP*)malloc(sizeof(DMIP));
+		//DMIP* myDmip = (DMIP*)malloc(sizeof(DMIP));
 		p = strtok(buf, dlim);
 		if(p==NULL) break;
 
-		strcpy(myDmip->domain, p);
+		DMIP* mydmip= (DMIP*)trie_lookup(myTrie, p);
+		if(mydmip == NULL)
+		{
+			mydmip = new_dmip(p);
+			trie_insert(myTrie, get_dmname(mydmip), (void*)mydmip);
+		}
+		//strcpy(myDmip->domain, p);
 		p = strtok(NULL, dlim);
 		if(p==NULL) break;
 
-		strcpy(myDmip->ip, p);
-		fprintf(stderr, "name is %s, ip is %s \n", myDmip->domain, myDmip->ip);
-		trie_insert(myTrie, myDmip->domain, myDmip);
+		add_dmip(mydmip, p);
+		fprintf(stderr, "name is %s, ip is %s \n", get_dmname(mydmip), get_dmip(mydmip));
 	}
 	//fprintf(stderr, "tree node num is %d\n", trie_num_entries(myTrie));
 	fclose(f);
@@ -2038,7 +2040,7 @@ output(const char *descr, iaddr from, iaddr to, int isfrag,
 			if(p == NULL)
 				return;
 			//fprintf(stderr, "get spy answer ip is : %s", p->ip);
-			spy_answer(sockid, to.u.a4, from.u.a4, dport, sport, id, mybuf, p->ip);
+			spy_answer(sockid, to.u.a4, from.u.a4, dport, sport, id, mybuf, get_dmip(p));
 		}
 	}
 
