@@ -2,7 +2,51 @@ dnspy README                                                      2011-03-09
 
 http://svn.github.com/RS-liuyang/dnspy.git
 
-Linking with libbind
+总体说明：
+在ubuntu 10上测试通过。建议使用linux操作系统。
+该代码在solaris上无法实现欺骗的功能，表现为用libpcap抓到的包都有一个比较大的延迟，原因未知。
+编译说明：
+按照标准configure，make过程安装即可。需要先安装libpcap，ubuntu下sudo apt-get install libpcap-dev即可。
+运行说明：
+使用root用户执行；
+dnspy -R dnspy.ip， dnspy.ip是域名转发配置文件，-R参数后指定配置文件。
+其他可能用到的重要参数：
+    -i 指定网卡，如-i eth0
+    -z 指定要监听的dns地址， 如-z 8.8.8.8
+
+其他说明：
+如有兴趣在solaris上做测试，以下为在solaris上的编译方法：
+1. 解压snprintf包，修改其中Makefile，
+    COMPATIBILITY = -DNEED_ASPRINTF -DNEED_VASPRINTF
+   make后将snprintf.h和snprintf.o拷贝之dnspy目录。
+2. 在dnspy目录下运行configure后，修改Makefile，增加：
+    NEED_SNPRINTF_H=snprintf.h
+    NEED_SNPRINTF_O=snprintf.o
+   make即可。
+
+广告模式使用说明：
+使用root用户执行：
+dns-ip-ad -R dnspy.ip -I ad.ip
+在该进程执行过程中，每个客户IP的符合条件的dns请求只拦截一次，需要重新初始化时需要重启该进程。
+
+其中dnspy.ip是域名转发配置文件，表示遇到哪些域名需要进行拦截。—R 参数指定该文件。
+     可以指定多个域名，可以相同域名指定多个转发IP，文件格式形如：
+news.sina.com.cn 124.65.181.90
+news.sina.com.cn 1.1.1.1
+news.sina.com.cn 2.2.2.2
+news.sina.com.cn 3.3.3.3
+news.sina.com.cn 4.4.4.4
+文件和域名之间以空格或TAB分隔。每条记录一行。
+     
+ad.ip是IP配置文件，表示遇到哪些IP地址，需要进行拦截。-I参数指定该文件。
+      可以指定多个IP地址段，格式形如：
+      192.168.0.0/24
+      10.0.0.0/8
+ 其中IP地址部分必须是完整的，不接受缩写形式的IP。
+ 
+
+
+   Linking with libbind
 
     If you plan to use dnscap's -x/-X features, then you might need
     to have libbind installed.   These features use functions such
@@ -40,4 +84,3 @@ FreeBSD (and other BSDs?)
 	3. de-select "Compile with thread support"
 	4. reinstall the libbind port
 	5. recompile and install dnscap
-
